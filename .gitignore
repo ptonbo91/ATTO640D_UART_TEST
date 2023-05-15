@@ -1,0 +1,32 @@
+# Blacklist files/folders in same directory as the .gitignore file
+/*
+
+# Whitelist some files
+!.gitignore
+!TUVE_SYSTEM.tcl
+!post_bitstream.tcl
+
+# Whitelist srcs directory
+!/TUVE_SYSTEM.srcs
+
+# Blacklist contents of srcs directory
+/TUVE_SYSTEM.srcs/*
+
+# Whitelist srcs/constrs_1 and srcs/sources_1 directory
+!/TUVE_SYSTEM.srcs/constrs_1
+!/TUVE_SYSTEM.srcs/sources_1
+
+# Blacklist contents of srcs/constrs_1 directory
+# /TUVE_SYSTEM.srcs/constrs_1/*
+# Whitelist contents of constr
+!/TUVE_SYSTEM.srcs/constrs_1/*/*.xdc
+!/TUVE_SYSTEM.srcs/constrs_1/*/*.sdc
+!/TUVE_SYSTEM.srcs/constrs_1/*/*.ucf
+
+# # Blacklist contents of sources_1/ip/* directory
+/TUVE_SYSTEM.srcs/sources_1/ip/*/*
+# # Whitelist .xci files in sources_1/ip/* directory
+!/TUVE_SYSTEM.srcs/sources_1/ip/*/*.xci
+
+# # Whitelist all files in sources_1/new/ directory
+!/TUVE_SYSTEM.srcs/sources_1/new/*
