@@ -4531,7 +4531,7 @@ process(CLK, RST)
 
       NUC1PT_CTRL_REG     <= (others => '0');   
 --      FPGA_VERSION_REG    <= x"00000003"; -- to release new firmware, increase this reg value by 1
-      FPGA_VERSION_REG    <= x"00_E4_00_01"; -- 00= Shutterless calib 04 = for trap MIPI --01 = Emagine Oled Mono display (ARJUN)-- 00 reserved -- 00 revision
+      FPGA_VERSION_REG    <= x"00_E4_00_02"; -- 00= Shutterless calib 04 = for trap MIPI --01 = Emagine Oled Mono display (ARJUN)-- 00 reserved -- 00 revision
       FPGA_RDDATA         <= (others => '0');
 --      Clip_Threshold      <= STD_LOGIC_VECTOR(to_unsigned(Clip_Threshold_Init_Value, Clip_Threshold'length));--x"0076c";
 --      MIN_PIXEL_COUNT_PER <= std_logic_vector(to_unsigned(10,MIN_PIXEL_COUNT_PER'length));

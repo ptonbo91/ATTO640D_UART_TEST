@@ -612,6 +612,7 @@ reg [9:0] wait_cnt;
 reg trigger_reg;
 wire trigger_edge;
 reg [31:0] timeout_count;
+reg [7:0]  uart_data_timeout_count;
 /*(* mark_debug = "true" *)*/reg [6:0] st_temp;
 (* mark_debug = "true" *)reg [6:0] st;
 reg [9:0] send_cnt;
@@ -636,6 +637,7 @@ wire [7:0] doB_rdb;
 wire [31:0] doB_db;
 reg [31:0] diA_rdb;
 reg [7:0] diA_db;
+reg uart_data_timeout_error;
 reg devno_error;
 reg devid_error;
 reg footer_error;
@@ -1698,6 +1700,8 @@ assign  toggle_gpio_neg_edge = toggle_gpio_d & (!toggle_gpio);
 always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
     reg [16-1:0] read_len_s;
     if (rst == 1) begin
+        uart_data_timeout_count <= 0;
+        uart_data_timeout_error <= 0;
         av_rdsdram_burstcount <= 0;
         resp_data_length <= 0;
         av_fpga_read_r <= 0;
@@ -1749,7 +1753,7 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
         addr_count <= 0;
         header <= 0;
         addrB_rdb <= 0;
-        st <= r_init;
+        st <= r_idle;//r_init;
         dev_no <= 0;
         data_length <= 0;
         av_fpga_write_r <= 0;
@@ -2278,6 +2282,7 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
                 av_sensor_i2c_read <= 1'b0;
                 if (((data == HEADER_BYTE) && datavalid && recv_cnt==0)) begin
                     header <= data;
+                    uart_data_timeout_error <= 1'b0;
                     devid_error <= 1'b0;
                     devno_error <= 1'b0;
                     crc_error <= 1'b0;
@@ -2396,8 +2401,29 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
                       addrB_db <= 0;
                       crc_calculated <= 0;
                 end
+                
                 if (trigger_edge) begin
                     st <= r_get_data;
+                    uart_data_timeout_count <= 0;
+                end
+                else begin   
+                    if(recv_cnt >= 1)begin            
+                        if ((uart_data_timeout_count == 16)) begin
+                            uart_data_timeout_count <= 0;
+                            recv_cnt                <= 0;
+                            uart_data_timeout_error <= 1'b1;
+                            st <= r_wait;
+                            st_temp <= r_take_action;
+                        end
+                        else begin
+                            if (tick_1ms) begin
+                                uart_data_timeout_count <= uart_data_timeout_count + 1;
+                            end
+                        end
+                    end
+                    else begin
+                        uart_data_timeout_count <= 0;
+                    end
                 end
             end
             r_get_data: begin
@@ -2549,7 +2575,7 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
                 end
             end
             r_take_action: begin
-                if (crc_error || data_length_error || footer_error || devno_error || devid_error || cmd_type_error || sd_card_error) begin 
+                if (uart_data_timeout_error || crc_error || data_length_error || footer_error || devno_error || devid_error || cmd_type_error || sd_card_error) begin 
                   st <= r_send_failure;
                 end
                 else if (({cmd[16-1:12], 12'h0} == FPGA_RD_REGS) && (cmd_type == (8'h72) || cmd_type == (8'h52))) begin
@@ -3600,7 +3626,10 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
             end
             r_send_failure: begin
                resp_cmd <= cmd;
-               if(crc_error) begin
+               if(uart_data_timeout_error)begin
+                 cmd_status <= 8'hF;
+               end  
+               else if(crc_error) begin
                  cmd_status <= 8'h1;
                end
                else if(footer_error) begin 
@@ -3623,7 +3652,8 @@ always @(posedge clk, posedge rst) begin: REGS_MASTER_PARSE_PACKET
                end
                else begin 
                  cmd_status <= 8'hD;
-               end        
+               end   
+               uart_data_timeout_error <= 0;     
                data_error <=0;        
                crc_error <= 0;
                footer_error <= 0;
@@ -9042,7 +9072,8 @@ wire [127:0] probe1;
 //                  init_done
 //                  } ;
 
-assign probe1 =  {2'b00,
+assign probe1 =  {tick_1ms,
+                  uart_data_timeout_error,
                   st,
                   recv_cnt,
                   header,
